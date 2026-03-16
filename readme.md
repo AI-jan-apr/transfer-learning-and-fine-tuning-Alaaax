@@ -1,62 +1,187 @@
-[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/DtxdB3_i)
-## 🧠 Task Overview
+# Food-11 Image Classification using EfficientNet (Transfer Learning)
 
-You will apply **Transfer Learning** using **EfficientNet** models with two approaches:  
-1. **Feature Extraction**  
-2. **Fine-tuning**
+## Project Overview
+This project applies **Transfer Learning** using **EfficientNetB0** to classify food images from the **Food-11 dataset**.
+Two main approaches were tested:
 
-⚠️ This task **must be completed in Google Colab or a cloud-based environment**. Training deep models like EfficientNet on local machines without GPU/TPU is highly inefficient and may lead to failed or incomplete experiments.
+- Feature Extraction
+- Fine-Tuning
+
+The goal is to compare these techniques and evaluate how fine‑tuning pretrained deep learning models affects performance.
+
+---
+
+## Dataset
+
+Dataset: **Food‑11 Image Dataset**
+
+Classes:
+
+- Bread
+- Dairy Product
+- Dessert
+- Egg
+- Fried Food
+- Meat
+- Noodles / Pasta
+- Rice
+- Seafood
+- Soup
+- Vegetable / Fruit
+
+Dataset split:
+
+- Training
+- Validation
+- Test
+
+---
+
+## Preprocessing
+
+Steps applied:
+
+- Images resized to **224 × 224**
+- Labels converted from **text → integer**
+- Data loaded using **TensorFlow tf.data pipeline**
+- Batch size = **32**
+
+Important issue discovered:
+
+At first, an additional image scaling step (`Rescaling(1./255)`) was applied.  
+However, **EfficientNet already includes internal preprocessing**, so this caused a mismatch and reduced performance.
+
+After removing the extra scaling step, model accuracy improved significantly.
+
+---
+
+## Experiment 1 — Feature Extraction
+
+EfficientNetB0 was used as a **feature extractor**.
+
+All pretrained layers were frozen and only the classification head was trained.
+
+Technique:
+```
+base_model.trainable = False
+```
+
+### Model Architecture
+
+EfficientNetB0 (ImageNet pretrained)
+-> GlobalAveragePooling
+-> Dropout
+-> Dense (11 classes – Softmax)
+
+### Results
+
+Test Accuracy: **0.9116**  
+Test Loss: **0.2753**
+
+Observation:
+
+- Training accuracy reached around **0.91**
+- Validation accuracy stabilized around **0.88**
+- Training and validation curves were close, indicating good generalization
+
+---
+
+## Experiment 2 — Fine‑Tuning
+
+Technique used:
+
+### Unfreeze only last n layers
+
+```
+for layer in base_model.layers[:-20]:
+    layer.trainable = False
+```
+
+Reason for choosing this technique:
+
+- Allows higher‑level features to adapt to the new dataset
+- Preserves general visual features learned from ImageNet
+- Reduces risk of destroying pretrained representations
+- Common and stable transfer learning strategy
+
+A smaller learning rate was used:
+
+```
+learning_rate = 1e-6
+```
+
+### Fine‑Tuning Results
+
+Test Accuracy: **0.8832**  
+Test Loss: **0.3704**
+
+---
+
+## Comparison
+
+| Approach | Accuracy | Loss |
+|---------|---------|------|
+| Feature Extraction | **0.9116** | **0.2753** |
+| Fine‑Tuning | **0.8832** | **0.3704** |
+
+Observation:
+
+Feature Extraction achieved better performance in this experiment.
+This can happen when pretrained features from ImageNet are already highly suitable for the dataset.
+
+Fine‑tuning slightly modified these representations and did not improve the final accuracy.
+
+---
 
 
+## Challenges
 
-## 📁 Dataset
+1. **Preprocessing mismatch**
 
-Dataset is already downloaded and loaded in the notebook. Preprocess as needed for training.
+An extra image scaling step (`1./255`) was initially applied before EfficientNet.
+Since EfficientNet already includes preprocessing layers, this caused poor performance.
 
+Removing this step significantly improved accuracy.
 
+2. **Fine‑Tuning sensitivity**
 
-## 🧪 Experiments
+Fine‑tuning pretrained models is sensitive to:
 
-### 1️⃣ Feature Extraction  
-- freeze all base layers  
-- train only the classification head  
+- learning rate
+- number of unfrozen layers
+- training duration
 
-### 2️⃣ Fine-tuning  
-- unfreeze last layers  
-- retrain full or partial base  
-
-You can enhance fine-tuning with these techniques:
-
-- **Unfreeze only last *n* layers**  
-  gradually increase trainable layers instead of full base model
-
-- **Gradual unfreezing**  
-  unfreeze layers one block at a time across training epochs
-
-- **Layer-wise learning rate decay**  
-  assign smaller LR to earlier layers and higher LR to deeper layers
-
-For each:
-- document model version  
-- include training/validation metrics  
-- write your analysis
+Even after adjustments, fine‑tuning did not outperform feature extraction in this case.
 
 
+3. **Learning rate sensitivity during fine-tuning**
 
-## 🧬 Bonus (Optional)
+During the fine-tuning stage, a learning rate of 1e-5 was initially used. This caused the pretrained weights to update too aggressively, which negatively affected performance. Reducing the learning rate helped stabilize the training process.
 
-- use **DagsHub** to upload and manage dataset in a cloud bucket  
-- track all runs using **MLflow**:
-  - versioned experiments  
-  - parameters, metrics, artifacts  
+---
 
-## 📝 README Must Include:
+## Conclusion
 
-- experiment summary  
-- plots for metrics  
-- observations on:
-  - feature extract vs fine-tune  
-  - generalization, convergence, overfitting 
+Transfer learning with EfficientNetB0 proved highly effective for the Food‑11 classification task.
+
+Key findings:
+
+- Feature Extraction achieved **91% accuracy**
+- Fine‑Tuning achieved **88% accuracy**
+- Pretrained EfficientNet features generalized well to food images
+- Proper preprocessing is critical when using pretrained models
+
+---
+
+## Technologies Used
+
+- Python
+- TensorFlow / Keras
+- EfficientNetB0
+- Google Colab
+- Matplotlib
+- Transfer Learning
+
 
 ## 🔗 Helpful Links
 
@@ -77,3 +202,4 @@ For each:
 
 - 📈 Using callbacks in Keras (e.g. EarlyStopping, ReduceLROnPlateau):  
   https://keras.io/api/callbacks/
+
